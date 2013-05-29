@@ -38,8 +38,41 @@ class RegexpParser
 	end
 end
 
+class MultiParser
+	def execute_all parse_results, execution_context
+		[0...@parsers.size].each do |i|
+			@parsers[i].execute parse_results[:results][i], execution_context
+		end
+	end
+end
+
 class ManyParser
 	def initialize parser
+		@parser = parser
+	end
+	
+	def parseFrom stream
+		i = 0
+		result = nil
+		results = []
+		begin
+			i = stream.i
+			
+			result = @parser.parseFrom stream
+			
+			if !result[:success]
+				stream.i = i
+				return results
+			end
+			
+			results << result
+		end while result && result[:success]
+		
+		# always succeeds
+		{
+			:success => true,
+			:results => results
+		}
 	end
 end
 
@@ -64,6 +97,12 @@ class SequenceParser
 			:results => results
 		}
 	end
+	
+	def execute results, execution_context
+		[1...@parsers.size].each do |i|
+			@parsers[i].execute results[i], execution_context
+		end
+	end
 end
 
 class BranchParser
@@ -72,7 +111,9 @@ class BranchParser
 	end
 	
 	def parseFrom stream
+		i = stream.i
 		@parsers.each do |parser|
+			stream.i = i
 			result = parser.parseFrom stream
 			return {
 				:success => true,
@@ -80,6 +121,11 @@ class BranchParser
 				:result => result
 			} if result[:success]
 		end
+	end
+	
+	def execute parse_results, execution_context
+	
+		
 	end
 end
 
@@ -162,41 +208,80 @@ class WhitespaceParser
 	end
 end
 
+class InvokeParser
+	def initialize
+		@sequence_parser = SequenceParser.new [
+			(SymbolParser.new),
+			(ManyParser.new (SequenceParser.new [WhitespaceParser.new, SymbolParser.new]))
+		]
+	end
+	
+	def parseFrom stream
+		puts "here"
+		@sequence_parser.parseFrom stream
+	end
+end
+
 class ImportParser
 	def parseFrom stream
 	
 		sequence_parser = SequenceParser.new [
 			(WordParser.new "import"),
 			(WhitespaceParser.new),
-			(SymbolParser.new),
-			(SemicolonParser.new)
+			(SymbolParser.new)
 		]
 		
 		sequence_parser.parseFrom stream
 	end
 	
-	def execute parse_result execution_context
-		if parse_result[:results][2] == "IO"
-			execution_context
+	def execute parse_result, execution_context
+		if parse_result[:result][:results][2][:match] == "IO"
+			execution_context[:funcs] << {
+				:name => "show",
+				:execute => proc do |arg|
+					arg.as("Showable")
+				end
+			}
 		end
 	end
 end
 
-class StatementExecutor
-	def execute stream
-		parser = BranchParser.new [ImportParser.new]
-		
-		result = parser.parseFrom stream
-		
-		if result[:success]
-		end
+class StatementParser
+	def initialize
+		@branch_parser = BranchParser.new [ImportParser.new, InvokeParser.new]
+		@semicolon_parser = SemicolonParser.new
+	end
+
+	def parseFrom stream
+		results = [(@branch_parser.parseFrom stream), (@semicolon_parser.parseFrom stream)]
+		{
+			:success => results[0][:success] && results[1][:success],
+			:results => results
+		}
+	end
+	
+	def execute parse_result, execution_context
+		@branch_parser.execute parse_result[:results][0], execution_context
 	end
 end
 
 class Executor
+	def initialize
+		@execution_context = {
+			:funcs => [],
+			:tasks => [],
+			:values => [],
+			:types => [],
+			:interfaces => []
+		}
+	end
+	
 	def execute stream
-		statement_executor = StatementExecutor.new
-		result = statement_executor.execute stream
+		statement_parser = StatementParser.new
+		parse_result = statement_parser.parseFrom stream
+		statement_parser.execute parse_result, @execution_context
+		
+		puts @execution_context
 	end
 end
 
@@ -205,6 +290,5 @@ File.open "test.q" do |file|
 	stream = Stream.new contents
 	
 	executor = Executor.new
-	result = executor.execute stream
-	puts result
+	executor.execute stream
 end
