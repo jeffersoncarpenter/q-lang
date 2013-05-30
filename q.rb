@@ -6,8 +6,8 @@
 # there are lots of classes called ____Parser
 # each of these has a method parseFrom :: Stream -> hackety intermediate parse object
 # 	this method leaves the stream right after the characters successfully parsed, or (currently) wherever it wants on fail
-# each of these has a method execute :: hackety intermediate parse object -> ExecutionContext -> ExecutionContext
-#	this method inspects the intermediate parse object and the execution context, and returns a modified execution context
+# each of these has a method execute :: hackety intermediate parse object -> ExecutionContext -> ()
+#	this method inspects the intermediate parse object and then mutates the ExecutionContext
 
 # the hackety intermediate parse objects are hashes with the following structure
 # {
@@ -51,9 +51,34 @@ class Stream
 	end
 end
 
-class RegexpParser
+class CharParser
+	def initialize char
+		@char = char
+	end
+	
+	def parseFrom stream
+		if stream.next == @char
+			{ :success => true }
+		else
+			stream.prev
+			{ :success => false }
+		end
+	end
+end
+
+class EachCharRegexpParser
 	def initialize regexp
 		@regexp = regexp
+	end
+	
+	def parseFrom stream
+		while stream.next =~ @regexp
+	end
+end
+
+class StringParser
+	def parseFrom stream
+		sequence_parser = SequenceParser.new [(CharParser.new '"')]
 	end
 end
 
@@ -81,6 +106,28 @@ class ManyParser
 			:success => true,
 			:results => results
 		}
+	end
+end
+
+class MaybeParser
+	def initializes parser
+		@parser = parser
+	end
+	
+	def parseFrom stream
+		@result = @parser.parseFrom stream
+		
+		if !result[:success]
+			return { :success => true }
+		end
+		
+		@result
+	end
+	
+	def execute execution_context
+		if @result[:success]
+			@result.execute execution_context
+		end
 	end
 end
 
@@ -143,17 +190,6 @@ class BranchParser
 	end
 end
 
-class SemicolonParser
-	def parseFrom stream
-		if stream.next == ';'
-			{ :success => true }
-		else
-			stream.prev
-			{ :success => false }
-		end
-	end
-end
-
 class SymbolParser
 	def parseFrom stream
 	
@@ -174,7 +210,7 @@ class SymbolParser
 			
 			{
 				:success => true,
-				:match => parsed
+				:result => parsed
 			}
 		else
 			{ :success => false }
@@ -235,7 +271,17 @@ class InvokeParser
 	end
 	
 	def parseFrom stream
-		@sequence_parser.parseFrom stream
+		@result = @sequence_parser.parseFrom stream
+	end
+	
+	def execute execution_context
+		symbol_parser_result = @result[:results][0]
+		method_name = symbol_parser_result[:result]
+		
+		method_def = execution_context[:funcs].first { |method_def| method_def[:name] == method_name }
+		
+		many_parser_results = @result[:results][1]
+		amany_parser_results.map do |whitespace_and_symbol|
 	end
 end
 
@@ -252,11 +298,12 @@ class ImportParser
 	end
 	
 	def execute execution_context
-		if @parse_result[:results][2][:match] == "IO"
+		if @parse_result[:results][2][:result] == "IO"
 			execution_context[:funcs] << {
 				:name => "show",
-				:execute => proc do |arg|
-					arg.as("Showable")
+				:execute => proc do |entity|
+				
+					entity.as(execution_context[:types]["Showable"])
 				end
 			}
 		end
@@ -265,8 +312,8 @@ end
 
 class StatementParser
 	def initialize
-		@branch_parser = BranchParser.new [ImportParser.new]
-		@semicolon_parser = SemicolonParser.new
+		@branch_parser = BranchParser.new [ImportParser.new, InvokeParser.new]
+		@semicolon_parser = CharParser.new ';'
 	end
 
 	def parseFrom stream
