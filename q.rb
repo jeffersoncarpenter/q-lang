@@ -129,17 +129,16 @@ class BranchParser
 			results << result
 		end
 		
-		{
+		@results = {
 			:success => true,
 			:results => results
 		}
+		
 	end
 	
-	def execute parse_results, execution_context
-		[0...@parsers.size].each do |i|
-			puts parse_results[:results][i]
-			puts parse_results[:results][i].class
-			@parsers[i].execute parse_results[:results][i], execution_context if parse_results[:results][i][:success]
+	def execute execution_context
+		@parsers.zip(@results[:results]).each do |parser, result|
+			parser.execute execution_context if result[:success]
 		end
 	end
 end
@@ -249,11 +248,11 @@ class ImportParser
 			(SymbolParser.new)
 		]
 		
-		sequence_parser.parseFrom stream
+		@parse_result = sequence_parser.parseFrom stream
 	end
 	
-	def execute parse_result, execution_context
-		if parse_result[:result][:results][2][:match] == "IO"
+	def execute execution_context
+		if @parse_result[:results][2][:match] == "IO"
 			execution_context[:funcs] << {
 				:name => "show",
 				:execute => proc do |arg|
@@ -266,20 +265,23 @@ end
 
 class StatementParser
 	def initialize
-		@branch_parser = BranchParser.new [ImportParser.new, InvokeParser.new]
+		@branch_parser = BranchParser.new [ImportParser.new]
 		@semicolon_parser = SemicolonParser.new
 	end
 
 	def parseFrom stream
 		results = [(@branch_parser.parseFrom stream), (@semicolon_parser.parseFrom stream)]
-		{
+		
+		@result = {
 			:success => results[0][:success] && results[1][:success],
 			:results => results
 		}
+		
+		@result
 	end
 	
-	def execute parse_result, execution_context
-		@branch_parser.execute parse_result[:results][0], execution_context
+	def execute execution_context
+		@branch_parser.execute execution_context
 	end
 end
 
@@ -297,7 +299,7 @@ class Executor
 	def execute stream
 		statement_parser = StatementParser.new
 		parse_result = statement_parser.parseFrom stream
-		statement_parser.execute parse_result, @execution_context
+		statement_parser.execute @execution_context
 		
 		puts @execution_context
 	end
