@@ -1,3 +1,22 @@
+# documentation on this file
+
+
+# Stream provides an API for moving throughout the source file, which is currently hardcoded to "test.q"
+
+# there are lots of classes called ____Parser
+# each of these has a method parseFrom :: Stream -> hackety intermediate parse object
+# 	this method leaves the stream right after the characters successfully parsed, or (currently) wherever it wants on fail
+# each of these has a method execute :: hackety intermediate parse object -> ExecutionContext -> ExecutionContext
+#	this method inspects the intermediate parse object and the execution context, and returns a modified execution context
+
+# the hackety intermediate parse objects are hashes with the following structure
+# {
+# 	:success => whether the parser found anything,
+#	:result(s) => object that contains the essential matched features from the file
+# }
+
+
+
 class Stream
 	def initialize enum
 		@i = -1
@@ -38,21 +57,13 @@ class RegexpParser
 	end
 end
 
-class MultiParser
-	def execute_all parse_results, execution_context
-		[0...@parsers.size].each do |i|
-			@parsers[i].execute parse_results[:results][i], execution_context
-		end
-	end
-end
-
 class ManyParser
 	def initialize parser
 		@parser = parser
 	end
 	
 	def parseFrom stream
-		i = 0
+		i = stream.i
 		result = nil
 		results = []
 		begin
@@ -60,13 +71,10 @@ class ManyParser
 			
 			result = @parser.parseFrom stream
 			
-			if !result[:success]
-				stream.i = i
-				return results
-			end
-			
 			results << result
 		end while result && result[:success]
+		
+		stream.i = i
 		
 		# always succeeds
 		{
@@ -82,14 +90,15 @@ class SequenceParser
 	end
 	
 	def parseFrom stream
-		i = stream.i
 		results = []
 		@parsers.each do |parser|
 			result = parser.parseFrom stream
 			results << result
 			if result[:success] == false
-				stream.i = i
-				return results
+				return {
+					:success => false,
+					:results => results
+				}
 			end
 		end
 		{
@@ -111,21 +120,27 @@ class BranchParser
 	end
 	
 	def parseFrom stream
+		results = []
+		
 		i = stream.i
 		@parsers.each do |parser|
 			stream.i = i
-			result = parser.parseFrom stream
-			return {
-				:success => true,
-				:type => parser.class,
-				:result => result
-			} if result[:success]
+			result = (parser.parseFrom stream)
+			results << result
 		end
+		
+		{
+			:success => true,
+			:results => results
+		}
 	end
 	
 	def execute parse_results, execution_context
-	
-		
+		[0...@parsers.size].each do |i|
+			puts parse_results[:results][i]
+			puts parse_results[:results][i].class
+			@parsers[i].execute parse_results[:results][i], execution_context if parse_results[:results][i][:success]
+		end
 	end
 end
 
@@ -195,15 +210,19 @@ class WhitespaceParser
 	def parseFrom stream
 	
 		success = false
+		parsed = ""
+		char = ""
 		
-		while stream.next =~ /\s/
-			success = true
-		end
+		begin
+			char = stream.next
+			parsed << char
+		end while char =~ /\s/
 		
 		stream.prev
 		
 		{
-			:success => success
+			:success => parsed.size > 0,
+			:result => parsed
 		}
 	end
 end
@@ -217,14 +236,13 @@ class InvokeParser
 	end
 	
 	def parseFrom stream
-		puts "here"
 		@sequence_parser.parseFrom stream
 	end
 end
 
 class ImportParser
 	def parseFrom stream
-	
+		
 		sequence_parser = SequenceParser.new [
 			(WordParser.new "import"),
 			(WhitespaceParser.new),
