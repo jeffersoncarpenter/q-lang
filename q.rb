@@ -72,13 +72,26 @@ class EachCharRegexpParser
 	end
 	
 	def parseFrom stream
-		while stream.next =~ @regexp
+		@parsed = ""
+		char = stream.next
+		
+		while char =~ @regexp
+			@parsed << char
+			char = stream.next
+		end
+		
+		{
+			:success => @parsed.size > 0,
+			:result => @parsed
+		}
 	end
 end
 
 class StringParser
 	def parseFrom stream
 		sequence_parser = SequenceParser.new [(CharParser.new '"')]
+		
+		sequence_parser.parseFrom stream
 	end
 end
 
@@ -154,9 +167,9 @@ class SequenceParser
 		}
 	end
 	
-	def execute results, execution_context
-		[1...@parsers.size].each do |i|
-			@parsers[i].execute results[i], execution_context
+	def execute execution_context
+		[0...@parsers.size].each do |i|
+			@parsers[i].execute @results[i], execution_context
 		end
 	end
 end
@@ -266,7 +279,7 @@ class InvokeParser
 	def initialize
 		@sequence_parser = SequenceParser.new [
 			(SymbolParser.new),
-			(ManyParser.new (SequenceParser.new [WhitespaceParser.new, SymbolParser.new]))
+			(ManyParser.new (SequenceParser.new [WhitespaceParser.new, (BranchParser.new [SymbolParser.new, StringParser.new])]))
 		]
 	end
 	
@@ -280,8 +293,13 @@ class InvokeParser
 		
 		method_def = execution_context[:funcs].first { |method_def| method_def[:name] == method_name }
 		
-		many_parser_results = @result[:results][1]
-		amany_parser_results.map do |whitespace_and_symbol|
+		many_parser_results = @result[:results][1][:results]
+		many_parser_results.map do |whitespace_and_branch|
+			whitespace = whitespace_and_branch[:results][0]
+			branch = whitespace_and_branch[:results][1]
+			
+			branch.execute execution_context
+		end
 	end
 end
 
