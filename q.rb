@@ -9,6 +9,8 @@
 # each of these has a method execute :: hackety intermediate parse object -> ExecutionContext -> ()
 #	this method inspects the intermediate parse object and then mutates the ExecutionContext
 
+# it looks like parseFrom could be called from execute and execute could :: string -> bool
+
 # the hackety intermediate parse objects are hashes with the following structure
 # {
 # 	:success => whether the parser found anything,
@@ -57,7 +59,8 @@ class CharParser
 	end
 	
 	def parseFrom stream
-		if stream.next == @char
+		char = stream.next
+		if char == @char
 			{ :success => true }
 		else
 			stream.prev
@@ -108,7 +111,6 @@ class ManyParser
 			i = stream.i
 			
 			result = @parser.parseFrom stream
-			
 			results << result
 		end while result && result[:success]
 		
@@ -155,13 +157,15 @@ class SequenceParser
 			result = parser.parseFrom stream
 			results << result
 			if result[:success] == false
-				return {
+				@results = {
 					:success => false,
 					:results => results
 				}
+				
+				return @results
 			end
 		end
-		{
+		@sresults = {
 			:success => true,
 			:results => results
 		}
@@ -259,12 +263,12 @@ class WhitespaceParser
 	
 		success = false
 		parsed = ""
-		char = ""
+		char = stream.next
 		
-		begin
+		while char =~ /\s/
 			char = stream.next
 			parsed << char
-		end while char =~ /\s/
+		end
 		
 		stream.prev
 		
@@ -275,11 +279,28 @@ class WhitespaceParser
 	end
 end
 
+class TermParser
+	def initialize
+		@branch_parser = BranchParser.new [
+			SymbolParser.new,
+			StringParser.new
+		]
+	end
+	
+	def parseFrom stream
+		@result = @branch_parser.parseFrom stream
+	end
+	
+	def execute execution_context
+		@result = @branch_parser.execute execution_context
+	end
+end
+
 class InvokeParser
 	def initialize
 		@sequence_parser = SequenceParser.new [
 			(SymbolParser.new),
-			(ManyParser.new (SequenceParser.new [WhitespaceParser.new, (BranchParser.new [SymbolParser.new, StringParser.new])]))
+			(ManyParser.new (SequenceParser.new [WhitespaceParser.new, TermParser.new]))
 		]
 	end
 	
