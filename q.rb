@@ -99,8 +99,11 @@ class StringParser
 end
 
 class ManyParser
-	def initialize parser
-		@parser = parser
+	def initialize &constructor
+		@new_parser = proc do
+			yield
+		end
+		@parsers = [@new_parser.call]
 	end
 	
 	def parseFrom stream
@@ -110,17 +113,26 @@ class ManyParser
 		begin
 			i = stream.i
 			
-			result = @parser.parseFrom stream
+			parser = @new_parser.call
+			@parsers << parser
+			result = parser.parseFrom stream
 			results << result
 		end while result && result[:success]
 		
 		stream.i = i
 		
 		# always succeeds
-		{
+		@results = {
 			:success => true,
 			:results => results
 		}
+	end
+	
+	def execute execution_context
+		
+		@parsers.each do |parser|
+			parser.execute execution_context
+		end
 	end
 end
 
@@ -165,15 +177,15 @@ class SequenceParser
 				return @results
 			end
 		end
-		@sresults = {
+		@results = {
 			:success => true,
 			:results => results
 		}
 	end
 	
 	def execute execution_context
-		[0...@parsers.size].each do |i|
-			@parsers[i].execute @results[i], execution_context
+		(0...@parsers.size).each do |i|
+			@parsers[i].execute execution_context
 		end
 	end
 end
@@ -225,13 +237,17 @@ class SymbolParser
 			
 			stream.prev
 			
-			{
+			@result = {
 				:success => true,
 				:result => parsed
 			}
 		else
 			{ :success => false }
 		end
+	end
+	
+	def execute execution_context
+		execution_context[:current_symbol] = @result[:result]
 	end
 end
 
@@ -277,6 +293,9 @@ class WhitespaceParser
 			:result => parsed
 		}
 	end
+	
+	def execute execution_context
+	end
 end
 
 class TermParser
@@ -300,7 +319,7 @@ class InvokeParser
 	def initialize
 		@sequence_parser = SequenceParser.new [
 			(SymbolParser.new),
-			(ManyParser.new (SequenceParser.new [WhitespaceParser.new, TermParser.new]))
+			(ManyParser.new { SequenceParser.new [WhitespaceParser.new, TermParser.new] })
 		]
 	end
 	
@@ -315,11 +334,11 @@ class InvokeParser
 		method_def = execution_context[:funcs].first { |method_def| method_def[:name] == method_name }
 		
 		many_parser_results = @result[:results][1][:results]
-		many_parser_results.map do |whitespace_and_branch|
-			whitespace = whitespace_and_branch[:results][0]
-			branch = whitespace_and_branch[:results][1]
+		many_parser_results.map do |whitespace_and_term|
+			whitespace = whitespace_and_term[:results][0]
+			term = whitespace_and_term[:results][1]
 			
-			branch.execute execution_context
+			@sequence_parser.execute execution_context
 		end
 	end
 end
