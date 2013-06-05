@@ -53,6 +53,21 @@ class Stream
 	end
 end
 
+=begin
+
+I'm adding this later to standardize things a bit
+
+class ParseResult
+	attr_accessor :success, :result
+	
+	def initialize success, result
+		@success = success
+		@result = result
+	end
+end
+
+=end
+
 class CharParser
 	def initialize char
 		@char = char
@@ -90,6 +105,8 @@ class EachCharRegexpParser
 	end
 end
 
+# looks for a string, like this kind of thing
+# "hello world"
 class StringParser
 	def parseFrom stream
 		sequence_parser = SequenceParser.new [(CharParser.new '"')]
@@ -98,6 +115,7 @@ class StringParser
 	end
 end
 
+# builds parsers using the constructor you give it, and runs as many as it can
 class ManyParser
 	def initialize &constructor
 		@new_parser = proc do
@@ -136,6 +154,7 @@ class ManyParser
 	end
 end
 
+# merely wraps another parser, but always returns :success=true
 class MaybeParser
 	def initializes parser
 		@parser = parser
@@ -158,6 +177,7 @@ class MaybeParser
 	end
 end
 
+# the sequence parser and the branch parser together allow you to parse arbitrary trees of syntax possibilities, whatever that means
 class SequenceParser
 	def initialize parsers
 		@parsers = parsers
@@ -190,6 +210,7 @@ class SequenceParser
 	end
 end
 
+# follows all the branches
 class BranchParser
 	def initialize parsers
 		@parsers = parsers
@@ -206,13 +227,24 @@ class BranchParser
 		end
 		
 		@results = {
-			:success => true,
+			:success => results.index { |result| result[:success] },
 			:results => results
 		}
 		
+		puts "parseFrom"
+		puts @parsers
+		puts @results
+		puts @results.class
+		puts "\n\n"
+		@results
 	end
 	
 	def execute execution_context
+		puts "execute"
+		puts @parsers
+		puts @results
+		puts @results.class
+		puts "\n\n"
 		@parsers.zip(@results[:results]).each do |parser, result|
 			parser.execute execution_context if result[:success]
 		end
@@ -241,6 +273,8 @@ class SymbolParser
 				:success => true,
 				:result => parsed
 			}
+			
+			@result
 		else
 			{ :success => false }
 		end
