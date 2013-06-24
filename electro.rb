@@ -4,34 +4,62 @@ class Test
   end
 end
 
-class QType
-  # @@implementations[implementent_type][implementing_type]
-  @@implementations = {}
+module QType
+  # it goes QType.Implementations[implementing][implemented]
+  @implementations = {}
 
-  def self.implementations
-    @@implementations
+  def QType.Implementations
+    @implementations
+  end
+    
+  def as type, &block
+    return yield self if self.class == type
+    
+    if implementation = implementations[type]
+      return implementation.call self, proc {|cast_type| yield cast_type}
+    end
+
+    thisTypeImplements = QType.Implementations[self.class]
+    implementation = thisTypeImplements[type] if thisTypeImplements
+    implementation.call self, proc {|cast_type| yield cast_type} if implementation
   end
 
-  def initialize
-    QType.implementations[self.class] = {}
+  def implementations
+    @implementations ||= {}
   end
 
-  def self.implements? type
-    puts QType.implementations
-    self == type || QType.implementations[self].keys.index {|type| type.implements? type}
+  def implement type, implementation
+    @implementations ||= {}
+    @implementations[type] = implementation
+  end
+  
+  def self.included(base)
+    base.extend(ClassMethods)
   end
 
-  def as type
-    self if self.class == type
-    implementation = QType.implementations[self.class][type]
-    if implementation
-      implementation.call type
+  def implements? type
+    return true if implementations[type]
+    self.class.implements? type
+  end
+    
+  
+  module ClassMethods
+    def implements? type
+      return true if self == type
+      if typeImplementations = QType.Implementations[self]
+        return true if typeImplementations.keys.index {|type| type.implements? type}
+      end    
+    end
+    
+    def implement type, implementation
+      QType.Implementations[self] ||= {}
+      QType.Implementations[self][type] = implementation
     end
   end
+end
 
-  def self.implement type, implementation
-    QType.implementations[type] = implementations
-  end
+class Object
+  include QType
 end
 
 # returns an array of objects sorted by the constraint they match
@@ -57,11 +85,9 @@ def match constraints, objects
     end
   end
   if !best_match
-    puts "Unable to find match"
-    puts "constraints:"
-    puts constraints
-    puts "objects:"
+    puts
     puts objects
+    raise "Unable to find match"
   end
   return best_match
 end
@@ -75,7 +101,7 @@ class QMethod
 
   def call args
     constraints = @param_types.map do |type|
-      proc {|object| object.class.implements? type}
+      proc {|object| object.implements? type}
     end
     
     ordered_args = match constraints, args
@@ -88,6 +114,7 @@ class QMethod
   def invoke ordered_args, types, &block
     first_arg = ordered_args.shift
     first_type = types.shift
+    
 
     first_arg.as first_type do |cast_arg|
       if ordered_args.size > 0
@@ -102,30 +129,30 @@ class QMethod
   end
 end
 
-class QString < QType
-  implement String, proc {|qString| qString.as String }
+class QString
+  attr_reader :string
+
+  include QType
+
+  implement String, proc {|qString, continuation| continuation.call qString.string }
   
   def initialize string
     @string = string
-    super()
-  end
-
-  def as type, &block
-    if type == String
-      yield @string
-    end
-
-    super type do |cast_type|
-      yield cast_type
-    end
   end
 end
 
-class QArray < QType
+class QArray
+  attr_reader :array
+
+  include QType
+
   def initialize type
     @type = type
     @array = []
-    super
+
+    implement type, proc {|qArray, continuation| qArray.array.each do |object|
+        continuation.call object
+      end}
   end
 
   def push object
@@ -133,19 +160,21 @@ class QArray < QType
       @array << object
     end
   end
-
-  def as type, &block
-    if type == @type
-      @array.each {|object| yield object }
-    end
-  end
 end
 
 
 
-# test case 1: QString type auto-casts to String
+# function used in early test cases
 
 show = QMethod.new [String], nil, proc {|string| puts string}
+
+
+# test case 0: function works
+
+show.call ["aoeu"]
+puts "\n\n"
+
+# test case 1: QString type auto-casts to String
 
 string = QString.new "hello world"
 show.call [string]
@@ -157,5 +186,14 @@ puts "\n\n"
 array = QArray.new String
 array.push "El Bargo"
 array.push "2 3 4"
+show.call [array]
+puts "\n\n"
+
+
+# test case 3: QArray<QString> auto-casts to String
+
+array = QArray.new QString
+array.push (QString.new "El Mango")
+array.push (QString.new "Hobo")
 show.call [array]
 puts "\n\n"
