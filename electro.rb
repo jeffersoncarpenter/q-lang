@@ -5,13 +5,56 @@ class Test
 end
 
 module QType
-  # it goes QType.Implementations[implementing][implemented]
-  @implementations = {}
+  # it goes implementations[implementer][implemented]
 
-  def QType.Implementations
-    @implementations
+  # you can programmatically have your objects implement things using these methods added by the mixin
+
+  def implementations
+    @implementations ||= {}
+  end
+
+  # implementation is a proc that takes your object and returns the new type
+  # this means you can only use public stuff to implement stuff
+  def implement type, implementation
+    implementations[type] = implementation
+  end
+  
+  def implements? type
+    implementations[type] || (self.class.implements? type)
   end
     
+
+  # a type can implement things using these class methods
+
+  def QType.Implementations
+    @implementations ||= {}
+  end
+
+  def self.included(base)
+    base.extend(ClassMethods)
+  end
+
+  module ClassMethods
+    def implementations
+      @implementations ||= {}
+    end
+
+    def implements? type
+      return true if self == type
+      implementations.keys.index {|type| type.implements? type}
+    end
+    
+    def implement type, implementation
+      implementations[type] = implementation
+    end
+  end
+
+
+  # the as function is what you use to cast to a type
+
+  # note that you invert control by passing it a continuation
+  # the point of Q is to generate these continuations automatically
+
   def as type, &block
     return yield self if self.class == type
     
@@ -19,42 +62,8 @@ module QType
       return implementation.call self, proc {|cast_type| yield cast_type}
     end
 
-    thisTypeImplements = QType.Implementations[self.class]
-    implementation = thisTypeImplements[type] if thisTypeImplements
+    implementation = self.class.implementations[type]
     implementation.call self, proc {|cast_type| yield cast_type} if implementation
-  end
-
-  def implementations
-    @implementations ||= {}
-  end
-
-  def implement type, implementation
-    @implementations ||= {}
-    @implementations[type] = implementation
-  end
-  
-  def self.included(base)
-    base.extend(ClassMethods)
-  end
-
-  def implements? type
-    return true if implementations[type]
-    self.class.implements? type
-  end
-    
-  
-  module ClassMethods
-    def implements? type
-      return true if self == type
-      if typeImplementations = QType.Implementations[self]
-        return true if typeImplementations.keys.index {|type| type.implements? type}
-      end    
-    end
-    
-    def implement type, implementation
-      QType.Implementations[self] ||= {}
-      QType.Implementations[self][type] = implementation
-    end
   end
 end
 
@@ -171,29 +180,35 @@ show = QMethod.new [String], nil, proc {|string| puts string}
 
 # test case 0: function works
 
-show.call ["aoeu"]
-puts "\n\n"
+Test.test do
+  show.call ["aoeu"]
+  puts "\n\n"
+end
 
 # test case 1: QString type auto-casts to String
 
-string = QString.new "hello world"
-show.call [string]
-puts "\n\n"
-
+Test.test do
+  string = QString.new "hello world"
+  show.call [string]
+  puts "\n\n"
+end
 
 # test case 2: QArray<String> auto-casts to String, iterating itself in the process
 
-array = QArray.new String
-array.push "El Bargo"
-array.push "2 3 4"
-show.call [array]
-puts "\n\n"
-
+Test.test do
+  array = QArray.new String
+  array.push "El Bargo"
+  array.push "2 3 4"
+  show.call [array]
+  puts "\n\n"
+end
 
 # test case 3: QArray<QString> auto-casts to String
 
-array = QArray.new QString
-array.push (QString.new "El Mango")
-array.push (QString.new "Hobo")
-show.call [array]
-puts "\n\n"
+Test.test do
+  array = QArray.new QString
+  array.push (QString.new "El Mango")
+  array.push (QString.new "Hobo")
+  show.call [array]
+  puts "\n\n"
+end
