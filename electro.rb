@@ -5,8 +5,6 @@ class Test
 end
 
 module QType
-  # it goes implementations[implementer][implemented]
-
   # you can programmatically have your objects implement things using these methods added by the mixin
 
   def implementations
@@ -113,10 +111,15 @@ class QMethod
       proc {|object| object.implements? type}
     end
     
-    ordered_args = match constraints, args
-    
-    invoke ordered_args, @param_types.dup do |args_as_types|
-      @proc.call args_as_types
+    begin
+      ordered_args = match constraints, args
+
+      invoke ordered_args, @param_types.dup do |args_as_types|
+        @proc.call args_as_types
+      end
+    rescue
+      arg_types = args.map {|arg| arg.class}
+      puts "Couldn't execute method taking parameter types #{@param_types} with arguments of types #{arg_types}"
     end
   end
 
@@ -138,6 +141,7 @@ class QMethod
   end
 end
 
+
 class QString
   attr_reader :string
 
@@ -149,6 +153,7 @@ class QString
     @string = string
   end
 end
+
 
 class QArray
   attr_reader :array
@@ -172,6 +177,8 @@ class QArray
 end
 
 
+
+# to run the test cases, you look at the output and see if it's right
 
 # function used in early test cases
 
@@ -211,4 +218,24 @@ Test.test do
   array.push (QString.new "Hobo")
   show.call [array]
   puts "\n\n"
+end
+
+# test case 4: QTask<T> can be resolved
+
+Test.test do
+  task = QTask.new String
+  task.done do |string|
+    puts string
+  end
+  task.resolve "IT IS NOT THE CASE THAT"
+  puts "TASKS DONT WORK"
+end
+
+# test case 5: QTask<T> auto-casts to T
+
+Test.test do
+  task = QTask.new String
+  show [task]
+  task.resolve "1 == 2 AND"
+  puts "TASKS DONT AUTO_CAST"
 end
