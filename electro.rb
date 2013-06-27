@@ -39,8 +39,7 @@ module QType
     end
 
     def implements? type
-      return true if self == type
-      implementations.keys.index {|type| type.implements? type}
+      self == type || implementations.keys.index {|type| type.implements? type}
     end
     
     def implement type, implementation
