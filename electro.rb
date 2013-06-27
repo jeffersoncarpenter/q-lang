@@ -156,22 +156,32 @@ class QString
 end
 
 
-class QArray
-  attr_reader :array
-
+class Functor
   include QType
+  
+  def initialize type
+    implement type, proc { |functor, continuation|
+      functor.fmap continuation
+    }
+  end
+end
+
+
+class QArray < Functor
+  attr_reader :array
 
   def initialize type
     @type = type
     @array = []
+    super
+  end
 
-    implement type, proc { |qArray, continuation|
-      result = QArray.new @type
-      qArray.array.each do |object|
-        result.push (continuation.call object)
-      end
-      result
-    }
+  def fmap func
+    qArray = QArray.new @type
+    @array.each do |object|
+      qArray.push func.call object
+    end
+    qArray
   end
 
   def push object
@@ -182,20 +192,19 @@ class QArray
 end
 
 
-class QTask
-  include QType
-  
+class Task < Functor
   def initialize type
     @type = type
     @funcs = []
+    super
+  end
 
-    implement type, proc { |task, continuation|
-      newTask = QTask.new @type
-      task.done do |result|
-        newTask.resolve continuation.call result
-      end
-      newTask
-    }
+  def fmap continuation
+    task = Task.new @type
+    done do |result|
+      task.resolve continuation.call result
+    end
+    task
   end
 
   def done &block
@@ -253,10 +262,10 @@ Test.test do
   show.call [array]
 end
 
-# test case 4: QTask<T> can be resolved
+# test case 4: Task<T> can be resolved
 
 Test.test do
-  task = QTask.new String
+  task = Task.new String
   task.done do |string|
     puts string
   end
@@ -264,10 +273,10 @@ Test.test do
   puts "TASKS DONT WORK"
 end
 
-# test case 5: QTask<T> auto-casts to T
+# test case 5: Task<T> auto-casts to T
 
 Test.test do
-  task = QTask.new String
+  task = Task.new String
   show.call [task]
   task.resolve "1 == 2 AND"
   puts "TASKS DONT AUTO_CAST"
