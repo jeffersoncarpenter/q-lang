@@ -1,6 +1,7 @@
 class Test
   def self.test
     yield
+    puts "\n\n"
   end
 end
 
@@ -164,9 +165,13 @@ class QArray
     @type = type
     @array = []
 
-    implement type, proc {|qArray, continuation| qArray.array.each do |object|
-        continuation.call object
-      end}
+    implement type, proc { |qArray, continuation|
+      result = QArray.new @type
+      qArray.array.each do |object|
+        result.push (continuation.call object)
+      end
+      result
+    }
   end
 
   def push object
@@ -176,6 +181,38 @@ class QArray
   end
 end
 
+
+class QTask
+  include QType
+  
+  def initialize type
+    @type = type
+    @funcs = []
+
+    implement type, proc { |task, continuation|
+      newTask = QTask.new @type
+      task.done do |result|
+        newTask.resolve continuation.call result
+      end
+      newTask
+    }
+  end
+
+  def done &block
+    if @result
+      yield value
+    else
+      @funcs << proc {|result| yield result}
+    end
+  end
+
+  def resolve result
+    @result = result
+    @funcs.each do |func|
+      func.call result
+    end
+  end
+end
 
 
 # to run the test cases, you look at the output and see if it's right
@@ -189,7 +226,6 @@ show = QMethod.new [String], nil, proc {|string| puts string}
 
 Test.test do
   show.call ["aoeu"]
-  puts "\n\n"
 end
 
 # test case 1: QString type auto-casts to String
@@ -197,7 +233,6 @@ end
 Test.test do
   string = QString.new "hello world"
   show.call [string]
-  puts "\n\n"
 end
 
 # test case 2: QArray<String> auto-casts to String, iterating itself in the process
@@ -207,7 +242,6 @@ Test.test do
   array.push "El Bargo"
   array.push "2 3 4"
   show.call [array]
-  puts "\n\n"
 end
 
 # test case 3: QArray<QString> auto-casts to String
@@ -217,7 +251,6 @@ Test.test do
   array.push (QString.new "El Mango")
   array.push (QString.new "Hobo")
   show.call [array]
-  puts "\n\n"
 end
 
 # test case 4: QTask<T> can be resolved
@@ -235,7 +268,7 @@ end
 
 Test.test do
   task = QTask.new String
-  show [task]
+  show.call [task]
   task.resolve "1 == 2 AND"
   puts "TASKS DONT AUTO_CAST"
 end
