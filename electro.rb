@@ -280,3 +280,7 @@ Test.test do
   task.resolve "1 == 2 AND"
   puts "TASKS DONT AUTO_CAST"
 end
+
+# test case 6 was going to be Maybe<T>
+# but a deferred that never resolves is pretty much a Nothing
+# so Maybe<T> is redundant
