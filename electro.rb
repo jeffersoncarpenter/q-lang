@@ -1,3 +1,10 @@
+# electro.rb contains the Q type system
+
+# the cool thing about it is that it automatically casts your stuff in useful ways
+# not as in Int -> String and back, but as in Maybe Int -> Int
+
+require_relative 'codswallop.rb'
+
 class Test
   def self.test
     yield
@@ -29,7 +36,7 @@ module QType
     @implementations ||= {}
   end
 
-  def self.included(base)
+  def self.included base
     base.extend(ClassMethods)
   end
 
@@ -155,7 +162,7 @@ class QString
 end
 
 
-class Functor
+class Functor < Subject
   include QType
   
   def initialize type
@@ -222,6 +229,10 @@ class Task < Functor
   end
 end
 
+class Maybe < Functor
+end
+
+
 
 # to run the test cases, you look at the output and see if it's right
 
@@ -281,6 +292,14 @@ Test.test do
   puts "TASKS DONT AUTO_CAST"
 end
 
-# test case 6 was going to be Maybe<T>
-# but a deferred that never resolves is pretty much a Nothing
-# so Maybe<T> is redundant
+# test case 6: Maybe<T> auto-casts to T
+
+Test.test do
+  maybe = Maybe.new String
+  maybe.resolve "MAYBES WORK"
+  show.call [maybe]
+
+  maybe2 = Maybe.new String
+  maybe.fail "Error!!"
+  show.call [maybe]
+end
