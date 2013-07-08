@@ -7,7 +7,7 @@ require_relative 'codswallop.rb'
 
 class Test
   def self.test
-    yield
+#    yield
     puts "\n\n"
   end
 end
@@ -134,7 +134,6 @@ class QMethod
     first_arg = ordered_args.shift
     first_type = types.shift
     
-
     first_arg.as first_type do |cast_arg|
       if ordered_args.size > 0
         invoke ordered_args, types do |results|
@@ -162,7 +161,7 @@ class QString
 end
 
 
-class Functor < Subject
+class Functor
   include QType
   
   def initialize type
@@ -229,9 +228,80 @@ class Task < Functor
   end
 end
 
+
+
 class Maybe < Functor
 end
 
+
+
+class Ref < Functor
+  attr_accessor :val
+
+  def initialize type
+    @type = type
+    implement @type, proc {|ref| ref.val }
+    super type
+  end
+
+  def fmap func
+    result = Ref.new @type
+    result.val = func.call val
+    result
+  end
+end
+
+
+
+
+class Entity
+  def as type
+    if type.ancestors.include? Subject
+      value = type.new self
+      yield value if block_given?
+      return type.new self
+    end
+  end
+
+
+  def implements? type
+    if type.ancestors.include? Subject
+      return true
+    end
+    QType.instance_method(:implements?).bind(self).call type
+  end
+end
+
+
+
+class Subject
+  # Subject provides set and get methods
+
+  def initialize entity
+    @entity = entity
+  end
+
+  def self.define key, type
+    @@key_types ||= {}
+    @@key_types[key] = type
+  end
+
+  def qualified_key key
+    "#{self.class.to_s}.#{key}"
+  end
+
+  def get key
+    qkey = qualified_key key
+    if !@entity.get qkey
+      if @@key_types[key]
+        @entity.set qkey, (@@key_types[key].call)
+      else
+        @entity.set qkey, nil
+      end
+    end
+    @entity.get qkey
+  end
+end
 
 
 # to run the test cases, you look at the output and see if it's right
@@ -246,6 +316,7 @@ show = QMethod.new [String], nil, proc {|string| puts string}
 Test.test do
   show.call ["aoeu"]
 end
+
 
 # test case 1: QString type auto-casts to String
 
@@ -294,12 +365,12 @@ end
 
 # test case 6: Maybe<T> auto-casts to T
 
-Test.test do
-  maybe = Maybe.new String
-  maybe.resolve "MAYBES WORK"
-  show.call [maybe]
+#Test.test do
+#  maybe = Maybe.new String
+#  maybe.resolve "MAYBES WORK"
+#  show.call [maybe]
 
-  maybe2 = Maybe.new String
-  maybe.fail "Error!!"
-  show.call [maybe]
-end
+#  maybe2 = Maybe.new String
+#  maybe.fail "Error!!"
+#  show.call [maybe]
+#end
