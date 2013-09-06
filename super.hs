@@ -4,12 +4,15 @@ import Prelude hiding (foldr, mapM, sequence)
 import Control.Monad hiding (mapM, sequence)
 import Data.Traversable
 
--- the top two main functions work if you remove the DefaultResult and asDefault members of CanBe
+
+
+-- the top two of these test main functions work if you remove the DefaultResult and asDefault members of CanBe
 --main = sequence $ as putStrLn ["aoeu", "htns"]
 main = as (\x -> return x :: IO ()) $ as putStrLn ["aoeu", "htns"]
 --main = asDefault $ as putStrLn ["aoeu", "htns"]
 
 
+-- if you have a function from a to c, then type b can emulate the a, but only if we're allowed to have the function return something other than a straight c (what it returns exactly, is given by the Result type)
 class CanBe a b c where
   type Result a b c
 --  type DefaultResult a b c
