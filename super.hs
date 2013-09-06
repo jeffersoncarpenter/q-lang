@@ -31,7 +31,7 @@ instance (Functor f) => CanBe a (f a) c where
 --  asDefault arg = arg
 
 -- this one is merely a kludge so that I don't have to use "sequence" in main
--- any iterable structure full of monadic types can behave as 
+-- any iterable structure full of monadic types should be able to map and bind over itself for you
 instance (Traversable t, Monad m) => CanBe a (t (m a)) (m c) where
   type Result a (t (m a)) (m c) = m (t c)
 --  type DefaultResult a (t (m a)) (m c) = m (t a)
