@@ -12,7 +12,9 @@ main = as (\x -> return x :: IO ()) $ as putStrLn ["aoeu", "htns"]
 --main = asDefault $ as putStrLn ["aoeu", "htns"]
 
 
--- if you have a function from a to c, then type b can emulate the a, but only if we're allowed to have the function return something other than a straight c (what it returns exactly, is given by the Result type)
+-- if you have a function from a to c, then type b can emulate the a
+-- but only if we're allowed to have the function return something other than a straight c
+-- what it returns exactly, is given by the Result type
 class CanBe a b c where
   type Result a b c
 --  type DefaultResult a b c
