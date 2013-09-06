@@ -1,2 +1,2 @@
 import IO;
-show "hello";
+show "Hello!"
