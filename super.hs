@@ -6,10 +6,10 @@ import Data.Traversable
 
 
 
--- the top two of these test main functions work if you remove the DefaultResult and asDefault members of CanBe
---main = as putStrLn "aoeu"
---main = sequence $ as putStrLn ["aoeu", "htns"] :: IO [()]
-main = (as (\x -> return x :: IO ()) $ (as putStrLn ["aoeu", "htns"] :: [IO ()])) :: IO [()]
+
+--main = (asDefault $ as putStrLn "aoeu") :: IO ()
+main = sequence $ as putStrLn ["aoeu", "htns"] :: IO [()]
+--main = (as (\x -> return x :: IO ()) $ (as putStrLn ["aoeu", "htns"] :: [IO ()])) :: IO [()]
 --main = asDefault $ as putStrLn ["aoeu", "htns"]
 
 
@@ -17,23 +17,27 @@ main = (as (\x -> return x :: IO ()) $ (as putStrLn ["aoeu", "htns"] :: [IO ()])
 -- a is the type to be emulated
 -- b is the type that emulates a
 -- c is only applicable if we are using a b to call a function that expects an a.  It is the type that the function returns
--- d is the type that the surrounding context expects
-class CanBe a b c d where
-  as :: (a -> c) -> b -> d
+class CanBe a b c where
+  type Result a b c
+  as :: (a -> b) -> c -> Result a b c
+--  asDefault :: b -> Result a b a
 
 -- any type can trivially emulate itself
-instance CanBe a a c c where
+instance CanBe a c a where
+  type Result a c a = c
   as func = func
 --  asDefault arg = arg
 
 -- a functor of a type can emulate that type by fmapping over itself
-instance (Functor f) => CanBe a (f a) c (f c) where
+instance (Functor f) => CanBe a c (f a) where
+  type Result a c (f a) = f c
   as = fmap
 --  asDefault arg = arg
 
 -- this one is merely a kludge so that I don't have to use "sequence" in main
 -- any iterable structure full of monadic types should be able to map and bind over itself for you
-instance (Traversable t, Monad m) => CanBe a (t (m a)) (m c) (m (t c)) where
+instance (Traversable t, Monad m) => CanBe a (m c) (t (m a)) where
+  type Result a (m c) (t (m a)) = m (t c)
 --  type DefaultResult a (t (m a)) (m c) = m (t a)
   as func arg = mapM (>>= func) arg
 --  asDefault arg = sequence arg
