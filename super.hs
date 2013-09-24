@@ -13,31 +13,32 @@ main = sequence $ as putStrLn ["aoeu", "htns"] :: IO [()]
 --main = asDefault $ as putStrLn ["aoeu", "htns"]
 
 
--- The CanBe type class allows certain types to expose themselves as other types, when executed in a particular context
--- a is the type to be emulated
--- b is the type that emulates a
--- c is only applicable if we are using a b to call a function that expects an a.  It is the type that the function returns
-class CanBe a b c where
-  type Result a b c
-  as :: (a -> b) -> c -> Result a b c
---  asDefault :: b -> Result a b a
+-- The CanBe type class allows certain types to expose themselves as other types
+-- The CanBe type class is a parametric type class taking the following types:
+
+class CanBe input output emulator where
+  type OutputEmulator input output emulator
+  as :: (input -> output) -> emulator -> OutputEmulator input output emulator
+--  asDefault :: b -> OutputEmulator a b a
 
 -- any type can trivially emulate itself
 instance CanBe a c a where
-  type Result a c a = c
+  type OutputEmulator a c a = c
   as func = func
 --  asDefault arg = arg
 
 -- a functor of a type can emulate that type by fmapping over itself
 instance (Functor f) => CanBe a c (f a) where
-  type Result a c (f a) = f c
+  type OutputEmulator a c (f a) = f c
   as = fmap
 --  asDefault arg = arg
 
+
+
 -- this one is merely a kludge so that I don't have to use "sequence" in main
 -- any iterable structure full of monadic types should be able to map and bind over itself for you
-instance (Traversable t, Monad m) => CanBe a (m c) (t (m a)) where
-  type Result a (m c) (t (m a)) = m (t c)
---  type DefaultResult a (t (m a)) (m c) = m (t a)
-  as func arg = mapM (>>= func) arg
+--instance (Traversable t, Monad m) => CanBe (m a) (m c) (t (m a)) where
+--  type OutputEmulator (m a) (m c) (t (m a)) = m (t c)
+--  type DefaultOutputEmulator a (t (m a)) (m c) = m (t a)
+--  as func arg = sequence $ map func arg
 --  asDefault arg = sequence arg
