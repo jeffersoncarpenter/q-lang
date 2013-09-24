@@ -8,7 +8,7 @@ import Data.Traversable
 
 
 --main = (asDefault $ as putStrLn "aoeu") :: IO ()
-main = sequence $ as putStrLn ["aoeu", "htns"] :: IO [()]
+main = as putStrLn ["aoeu", "htns"] :: IO [()]
 --main = (as (\x -> return x :: IO ()) $ (as putStrLn ["aoeu", "htns"] :: [IO ()])) :: IO [()]
 --main = asDefault $ as putStrLn ["aoeu", "htns"]
 
@@ -16,22 +16,23 @@ main = sequence $ as putStrLn ["aoeu", "htns"] :: IO [()]
 -- The CanBe type class allows certain types to expose themselves as other types
 -- The CanBe type class is a parametric type class taking the following types:
 
-class CanBe input output emulator where
-  type OutputEmulator input output emulator
-  as :: (input -> output) -> emulator -> OutputEmulator input output emulator
+class CanBe input output outputEmulator inputEmulator where
+  as :: (input -> output) -> inputEmulator -> outputEmulator
 --  asDefault :: b -> OutputEmulator a b a
 
 -- any type can trivially emulate itself
-instance CanBe a c a where
-  type OutputEmulator a c a = c
+instance CanBe a c c a where
   as func = func
 --  asDefault arg = arg
 
 -- a functor of a type can emulate that type by fmapping over itself
-instance (Functor f) => CanBe a c (f a) where
-  type OutputEmulator a c (f a) = f c
+instance (Functor f) => CanBe a c (f c) (f a) where
   as = fmap
 --  asDefault arg = arg
+
+
+instance (Traversable t, Monad m) => CanBe a (m c) (m (t c)) (t a) where
+  as = mapM
 
 
 
