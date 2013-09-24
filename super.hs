@@ -6,7 +6,6 @@ import Data.Traversable
 
 
 
-
 --main = (as putStrLn "hello world") :: IO ()
 main = as putStrLn ["aoeu", "htns"] :: IO [()]
 
@@ -32,6 +31,12 @@ instance CanBe a c c a where
 -- a functor of a type can emulate that type by fmapping over itself
 instance (Functor f) => CanBe a c (f c) (f a) where
   as = fmap
+
+
+-- a monadic value can emulate the value it contains
+instance (Monad m) => CanBe a (m c) (m c) (m a) where
+  as func arg = arg >>= func
+
 
 
 -- this one feels kind of contrived tbh, even though the implementation is dead simple
