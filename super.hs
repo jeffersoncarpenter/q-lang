@@ -5,6 +5,8 @@ import Control.Monad hiding (mapM, sequence)
 import Data.Traversable
 
 
+-- note the odd behavior: you have to specify the type of main in order to use this contraption
+-- this must be fixed
 
 --main = (as putStrLn "hello world") :: IO ()
 main = as putStrLn ["aoeu", "htns"] :: IO [()]
@@ -16,9 +18,11 @@ main = as putStrLn ["aoeu", "htns"] :: IO [()]
 
 -- input is the type that the function expects
 -- output is the type that the function returns
--- inputEmulator is the type that we are enabling to expose itself as the input type
+-- inputEmulator is the type that now exposes itself as the input type
 -- outputEmulator is the type that is returned instead of output, whenever inputEmulator emulates input
 
+
+-- I don't know what order to put the arguments in exactly
 class CanBe input output outputEmulator inputEmulator where
   as :: (input -> output) -> inputEmulator -> outputEmulator
 
@@ -33,7 +37,7 @@ instance (Functor f) => CanBe a c (f c) (f a) where
   as = fmap
 
 
--- a monadic value can emulate the value it contains
+-- a monadic value can emulate the value it contains when passed to a function that it could be bound to
 instance (Monad m) => CanBe a (m c) (m c) (m a) where
   as func arg = arg >>= func
 
