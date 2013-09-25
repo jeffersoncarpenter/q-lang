@@ -42,7 +42,6 @@ instance (Monad m) => CanBe a (m c) (m c) (m a) where
   as func arg = arg >>= func
 
 
-
 -- this one feels kind of contrived tbh, even though the implementation is dead simple
 -- a function that returns a monadic value, can operate on a collection of input values
 -- however, it must make sure to return a monad of the traversable, not a traversable of monads
