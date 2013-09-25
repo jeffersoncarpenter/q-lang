@@ -9,8 +9,8 @@ import Data.Traversable
 -- this must be fixed
 
 --main = (as putStrLn "hello world") :: IO ()
-main = as putStrLn ["aoeu", "htns"] :: IO [()]
-
+--main = as putStrLn ["aoeu", "htns"] :: IO [()]
+main = (as putStrLn) getLine :: IO ()
 
 
 
