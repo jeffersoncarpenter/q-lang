@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 
 import Prelude hiding (foldr, mapM, sequence)
 import Control.Monad hiding (mapM, sequence)
@@ -8,9 +8,19 @@ import Data.Traversable
 -- note the odd behavior: you have to specify the type of main in order to use this contraption
 -- this must be fixed
 
---main = (as putStrLn "hello world") :: IO ()
---main = as putStrLn ["aoeu", "htns"] :: IO [()]
-main = (as putStrLn) getLine :: IO ()
+
+--main :: IO ()
+--main = sputStrLn "hello world"
+
+--main :: IO [()]
+--main = sputStrLn ["aoeu", "htns"]
+
+main :: IO ()
+main = sputStrLn getLine
+
+
+sputStrLn :: (CanBe String (IO ()) oe ie) => ie -> oe
+sputStrLn = as putStrLn
 
 
 
