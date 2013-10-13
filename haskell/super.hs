@@ -9,14 +9,13 @@ import Data.Traversable
 -- this must be fixed
 
 
---main :: IO ()
---main = sputStrLn "hello world"
 
---main :: IO [()]
---main = sputStrLn ["aoeu", "htns"]
+-- have to include type signatures with every usage, which is annoying
 
-main :: IO ()
-main = sputStrLn getLine
+main = (sputStrLn "aoeu"             :: IO ()) >>
+       (sputStrLn ["Hello", "World"] :: IO [()]) >>
+       (sputStrLn "Enter some text:" :: IO ()) >>
+       (sputStrLn getLine            :: IO ())
 
 
 
