@@ -19,6 +19,10 @@ main :: IO ()
 main = sputStrLn getLine
 
 
+
+-- this function does the same thing as putStrLn
+-- it can take whatever arguments you throw at it, and returns whatever it needs to
+
 sputStrLn :: (CanBe String (IO ()) oe ie) => ie -> oe
 sputStrLn = as putStrLn
 
