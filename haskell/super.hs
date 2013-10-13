@@ -5,11 +5,6 @@ import Control.Monad hiding (mapM, sequence)
 import Data.Traversable
 
 
--- note the odd behavior: you have to specify the type of main in order to use this contraption
--- this must be fixed
-
-
-
 -- have to include type signatures with every usage, which is annoying
 
 main = (sputStrLn "aoeu"             :: IO ()) >>
