@@ -6,10 +6,10 @@ main = do
   ijoin $ imap putStrLn []                               -- no-op
   ijoin $ imap putStrLn (Just "foo bar")                 -- prints "foo bar"
   ijoin $ imap putStrLn Nothing                          -- prints an empty line
-  ijoin $ imap (ijoin . (imap putStrLn)) [Just "hello"]  -- supports nesting using imap and ijoin
+  ijoin $ imap (ijoin . (imap putStrLn)) [Just "hello"]  -- supports nesting types
   ijoin $ imap putStrLn $                                
           imap show $                                    -- supports composing functions using imap
-          imap length ["aoeu", "aoeuaoeu"]                -- none of these functions takes an array
+          imap length ["aoeu", "aoeuaoeu"]               -- none of these functions takes an array... until now
 
 
 
