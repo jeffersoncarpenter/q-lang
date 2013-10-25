@@ -1,0 +1,74 @@
+<html>
+	<head>
+		<title>Javascript thing</title>
+		<script src="jquery-1.7.1.js"></script>
+	</head>
+	<body>
+		<script>
+			$(function () {
+				var Task = (function () {
+				
+					// new tasks are added to the list and finished tasks are removed from the list
+					var pending_task_list = [];
+					
+					// the task runner first sleeps 1ms, and increments 1ms each go-round.  it resets to 1 when tasks are added.
+					task_runner_sleep = 0;
+					
+					// this thing runs all the tasks in the pending_task_list
+					var run_tasks = function () {
+					
+						// call all tasks
+						for(var i = 0; i < pending_task_list.length; i++) {
+							if(pending_task_list[i].finished) {
+								pending_task_list.splice(i, 1);
+								alert("removed task");
+							}
+						}
+					
+						// recurse
+						task_runner_sleep += 1;
+						setTimeout(run_tasks, task_runner_sleep);
+					};
+					
+					run_tasks();
+				
+					var task = {}; // this object is Task
+					
+					task.new = function (get_value) {
+						
+						var t = {
+							finished: false,
+							value: null
+						};
+						
+						setTimeout(function () {
+							
+							t.value = get_value();
+							finished = true;
+						});
+					};
+					
+					return task;
+				})();
+				
+				Function.prototype._apply = Function.prototype.apply;
+				
+				Function.prototype.apply = function (thisArg, argsArray) {
+					alert("aoeu");
+				};
+				
+				var send_alert = function () {
+					alert("hello");
+				};
+				
+				var helloWorld = function () {
+					$("body").append("<div>Hello world</div>");
+					return 3;
+				};
+				
+				console.log(helloWorld());
+				helloWorld();
+			});
+		</script>
+	</body>
+</html>

@@ -1,0 +1,79 @@
+<html>
+	<head>
+		<title>jsthing</title>
+		<script src="jquery-1.7.1.js"></script>
+	</head>
+	<body>
+		<script>
+		
+		
+			// Async allows a function that takes, for example, a string
+			// to take take a deferred<string> instead
+			// and then return a deferred
+			
+			var AwaitAsyncArguments = function (func) {
+			
+				return function () {
+				
+					var tasksLeft = arguments.length;
+					var argsToPass = []; // values to pass to func
+					
+					var result = $.Deferred();
+					
+					var that = this;
+					var tryResolveResult = function () {
+					
+						if(tasksLeft === 0) {
+							var value = func.apply(that, argsToPass);
+							result.resolve(value);
+						}
+					};
+				
+					for(var i = 0; i < arguments.length; i++) {
+					
+						// the following function uses its own arguments variable
+						// so we need to do this
+						var _arguments = arguments;
+						
+						(function (i) {
+						
+							$.when(_arguments[i]).done(function (arg) {
+							
+								argsToPass[i] = arg;
+								
+								tasksLeft -= 1;
+								tryResolveResult();
+							});
+						})(i);
+					}
+					
+					tryResolveResult();
+					
+					return result;
+				};
+			};
+			
+			
+var logTwoThings = function (thing1, thing2) {
+	console.log(thing1 + " " + thing2 + "");
+};
+
+logTwoThings = logTwoThings;
+
+var thing1 = $.Deferred();
+var thing2 = $.Deferred();
+
+thing1.done(function (thing1Value) {
+	thing2.done(function (thing2Value) {
+		logTwoThings(thing1Value, thing2Value);
+	});
+});
+
+logTwoThings("foo", "bar");
+
+thing2.resolve("World");
+thing1.resolve("Hello");
+			
+		</script>
+	</body>
+</html>
