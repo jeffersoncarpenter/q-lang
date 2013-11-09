@@ -20,7 +20,7 @@ main = do
   -- prints nothing if the nullable string is null (explicitly typed eww gross)
   sputStrLn (Nothing :: Maybe String)
 
-  -- it happens twice when you pass in an array of nullable types
+  -- the trick happens twice when you pass in an array of nullable types
   sputStrLn [Just "hello"]
 
   -- sshow and slength don't work yet
