@@ -23,7 +23,7 @@ main = do
   -- it happens twice when you pass in an array of nullable types
   sputStrLn [Just "hello"]
 
-  -- this one doesn't work yet
+  -- sshow and slength don't work yet
   sputStrLn $ fmap show $ fmap length ["aoeu", "aoeuaoeu"]
 
   -- binds monads appropriately
