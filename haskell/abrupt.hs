@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, KindSignatures, GADTs, TypeFamilies, MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, UndecidableInstances, FlexibleContexts, OverlappingInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, TypeFamilies, FlexibleInstances, UndecidableInstances, FlexibleContexts #-}
 
 import Control.Monad
 
