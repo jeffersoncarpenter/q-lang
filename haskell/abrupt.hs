@@ -32,7 +32,7 @@ main = do
 
 
 
--- this code looks much cleaner than before, but it still has some problems:
+-- this main function looks much cleaner than before, but it still has some problems:
 
 
 -- 1: "empty" functors (like [] and Nothing) need to be explicitly typed
