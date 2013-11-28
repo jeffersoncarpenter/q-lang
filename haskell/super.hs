@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies, ExistentialQuantification, Rank2Types, UndecidableInstances #-}
 
 import Prelude hiding (foldr, mapM, sequence)
 import Control.Monad hiding (mapM, sequence)
@@ -12,6 +12,30 @@ main = (sputStrLn "aoeu"             :: IO ()) >>
        (sputStrLn "Enter some text:" :: IO ()) >>
        (sputStrLn getLine            :: IO ())
 
+
+-- SType t () = t
+-- SType t (f ()) = f t
+-- SType t (g (f ())) = g (f t)
+-- Etc.
+
+
+type family SType t coll where
+  SType t () = t
+  SType t (f ()) = f t
+
+sshow :: (Show a) => Super a coll -> Super String coll
+sshow = smap show
+
+smap :: (t -> o) -> Super t coll -> Super o coll
+smap func (Super val (Mapper map)) = Super (map func val) (Mapper map)
+
+--sjoin :: (Monad m) => Super (m o) coll -> m (Super o coll)
+
+data Mapper coll = Mapper (forall a t. (a -> t) -> SType a coll -> SType t coll)
+data Super a coll = Super (SType a coll) (Mapper coll)
+
+instance (Show (SType a coll)) => Show (Super a coll) where
+  show (Super val _) = show val
 
 
 -- this function does the same thing as putStrLn
