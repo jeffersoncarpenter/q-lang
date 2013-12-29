@@ -30,4 +30,10 @@ sjoin (SuperF fat) = SuperF <$> sequenceA fat
 sputStrLn :: Super String -> IO (Super ())
 sputStrLn = sjoin . fmap putStrLn
 
-main = sputStrLn (super ["aoeu", "htns"] :: Super String)
+sshow :: (Show a) => Super a -> Super String
+sshow = fmap show
+
+slength :: Super [a] -> Super Int
+slength = fmap length
+
+main = sputStrLn $ sshow $ slength (super ["aoeu", "aoeuhtns"] :: Super String)
