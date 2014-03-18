@@ -7,7 +7,7 @@ require_relative 'codswallop.rb'
 
 class Test
   def self.test
-#    yield
+    yield
     puts "\n\n"
   end
 end
